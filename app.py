@@ -56,3 +56,56 @@ with tab_config:
     with col_input:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown("<h4 style='color:#3b82f6; margin-bottom:15px; font-size:0.9rem;'>ENTRADA DA NOTA</h4>", unsafe_allow_html=True)
+        
+        with st.form("lote_form"):
+            lote_id = st.text_input("ID DO LOTE", placeholder="Ex: Lote A")
+            meta = st.number_input("PESO TOTAL DA NOTA (KG)", min_value=0.0, step=0.1)
+            estoque_txt = st.text_area("PESOS DE TODOS OS ROLOS (SEPARADOS POR VÍRGULA)", height=100, placeholder="Ex: 500, 450.5, 610...")
+            
+            submit = st.form_submit_button("▶ IDENTIFICAR ROLOS DO LOTE")
+            
+            if submit:
+                try:
+                    # Converter texto em lista de números
+                    estoque = [float(x.strip()) for x in estoque_txt.replace('\n', ',').split(',') if x.strip()]
+                    
+                    resultado = encontrar_combinacao(estoque, meta)
+                    
+                    if resultado:
+                        # Calcular o que sobrou
+                        sobra = estoque.copy()
+                        for r in resultado: sobra.remove(r)
+                        
+                        registro = {
+                            "id": lote_id, "meta": meta, "encontrados": resultado, 
+                            "sobra": sobra, "hora": pd.Timestamp.now().strftime("%H:%M")
+                        }
+                        st.session_state.historico.append(registro)
+                        st.success(f"Combinação encontrada para o {lote_id}!")
+                    else:
+                        st.error("Nenhuma combinação exata encontrada no estoque informado.")
+                except ValueError:
+                    st.error("Erro nos dados: Use apenas números e vírgulas.")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col_view:
+        st.markdown('<div class="section-card" style="min-height:460px;">', unsafe_allow_html=True)
+        if not st.session_state.historico:
+            st.markdown(f'<div style="text-align:center; padding-top:100px;">{icon_calc}<h3 style="color:#94a3b8;">Aguardando Processamento</h3></div>', unsafe_allow_html=True)
+        else:
+            res = st.session_state.historico[-1]
+            st.markdown(f"<h3 style='color:#3b82f6; margin-top:0;'>Resultado: {res['id']}</h3>", unsafe_allow_html=True)
+            
+            st.markdown(f"""
+                <div class="result-box">
+                    <p style="color:#94a3b8; font-size:0.8rem; margin:0;">ROLOS IDENTIFICADOS (SOMA EXATA):</p>
+                    <h2 style="color:#f8fafc; margin:5px 0;">{', '.join(map(str, res['encontrados']))}</h2>
+                    <p style="color:#3b82f6; font-size:0.9rem; margin:0;">Total: {sum(res['encontrados'])} KG</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("<p style='margin-top:20px; color:#94a3b8;'>ROLOS QUE SOBRARAM NO ESTOQUE:</p>", unsafe_allow_html=True)
+            st.write(res['sobra'])
+        st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown("<p style='text-align: center; color: #475569; font-size: 0.7rem; margin-top: 40px;'>© 2026 SomaAço. Desenvolvido por Laureano Romagnole 38.</p>", unsafe_allow_html=True)
