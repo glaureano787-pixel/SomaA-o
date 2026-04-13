@@ -11,7 +11,6 @@ st.markdown("""
     .block-container {padding-top: 2rem; padding-bottom: 0rem;}
     .stApp { background-color: #0f172a; color: #f8fafc; }
     
-    /* Abas customizadas */
     .stTabs [data-baseweb="tab-list"] { 
         background-color: #1e293b; 
         border-radius: 8px; 
@@ -20,10 +19,7 @@ st.markdown("""
     }
     .stTabs [data-baseweb="tab"] {
         height: 45px;
-        border: none !important;
-        background-color: transparent !important;
         color: #94a3b8 !important;
-        border-radius: 6px !important;
     }
     .stTabs [aria-selected="true"] {
         background-color: #334155 !important;
@@ -55,7 +51,6 @@ st.markdown("""
         border-radius: 8px;
     }
     
-    /* Ajuste para ícones SVG ficarem alinhados */
     .icon-svg {
         vertical-align: middle;
         margin-right: 8px;
@@ -87,17 +82,20 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-if 'historico' not in st.session_state: st.session_state.historico = []
+if 'historico' not in st.session_state: 
+    st.session_state.historico = []
 
-# 4. Tabs com ícones minimalistas embutidos via HTML
+# 4. Tabs
 tab_config, tab_hist = st.tabs(["Configuração", "Histórico"])
 
-# Injeção manual dos ícones nas labels das abas (Hack visual para Streamlit)
+# Injeção manual dos ícones
 st.markdown(f"""
     <script>
     var tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
-    tabs[0].innerHTML = '{icon_gear} Configuração';
-    tabs[1].innerHTML = '{icon_timer} Histórico';
+    if(tabs.length >= 2) {{
+        tabs[0].innerHTML = '{icon_gear} Configuração';
+        tabs[1].innerHTML = '{icon_timer} Histórico';
+    }}
     </script>
     """, unsafe_allow_html=True)
 
@@ -106,16 +104,31 @@ with tab_config:
     with col_input:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown("<h4 style='color:#3b82f6; margin-bottom:15px; font-size:0.9rem;'>ENTRADA DE DADOS</h4>", unsafe_allow_html=True)
-        lote_id = st.text_input("ID DO LOTE", placeholder="Ex: Lote 181")
-        c1, c2 = st.columns(2)
-        with c1: meta = st.number_input("META DE PESO (KG)", min_value=0.0)
-        with c2: qtd = st.number_input("QTD. ROLOS", min_value=0)
-        pesos_raw = st.text_area("ESTOQUE (PESOS DOS ROLOS)", height=120)
-        if st.button("▶ PROCESSAR AGRUPAMENTO"):
-            if lote_id and meta > 0:
-                if len(st.session_state.historico) >= 6: st.session_state.historico.pop(0)
-                st.session_state.historico.append({"id": lote_id, "meta": meta, "hora": pd.Timestamp.now().strftime("%H:%M")})
-                st.rerun()
+        
+        # Início do Formulário
+        with st.form("lote_form", clear_on_submit=False):
+            lote_id = st.text_input("ID DO LOTE", placeholder="Ex: Lote 181")
+            c1, c2 = st.columns(2)
+            with c1: meta = st.number_input("META DE PESO (KG)", min_value=0.0, step=0.1)
+            with c2: qtd = st.number_input("QTD. ROLOS", min_value=0)
+            pesos_raw = st.text_area("ESTOQUE (PESOS DOS ROLOS)", height=120, placeholder="600, 550, 595...")
+            
+            submit = st.form_submit_button("▶ PROCESSAR AGRUPAMENTO")
+            
+            if submit:
+                if lote_id and meta > 0:
+                    # Lógica simples para limpar o histórico e manter apenas os últimos 6
+                    if len(st.session_state.historico) >= 6: 
+                        st.session_state.historico.pop(0)
+                    
+                    st.session_state.historico.append({
+                        "id": lote_id, 
+                        "meta": meta, 
+                        "hora": pd.Timestamp.now().strftime("%H:%M")
+                    })
+                    st.rerun()
+                else:
+                    st.error("Por favor, preencha o ID e a Meta.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_view:
@@ -130,6 +143,8 @@ with tab_config:
             ultimo = st.session_state.historico[-1]
             st.markdown(f"<h2 style='color:#3b82f6;'>Lote: {ultimo['id']}</h2>", unsafe_allow_html=True)
             st.info(f"Otimizando para {ultimo['meta']} KG...")
+            # Aqui entrará a lógica de cálculo no futuro
         st.markdown('</div>', unsafe_allow_html=True)
 
+# Rodapé
 st.markdown("<p style='text-align: center; color: #475569; font-size: 0.7rem; margin-top: 40px;'>© 2026 SomaAço. Desenvolvido por Laureano Romagnole 38.</p>", unsafe_allow_html=True)
