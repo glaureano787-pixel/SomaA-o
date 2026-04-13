@@ -11,10 +11,13 @@ if 'historico_operacoes' not in st.session_state: st.session_state.historico_ope
 if 'resultados_atuais' not in st.session_state: st.session_state.resultados_atuais = None
 if 'form_count' not in st.session_state: st.session_state.form_count = 0
 
-# 3. Definição de Ícones SVG Minimalistas
-icon_gear = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"></path></svg>'
-icon_timer = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>'
+# 3. Definição de Ícones SVG Minimalistas (Removendo Gear/Timer antigos)
 icon_trash = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>'
+
+# Novos Ícones baseados nas inspirações
+icon_paper_tab = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+icon_clock_tab = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+icon_logo_rolls = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 15px;"><circle cx="7" cy="14" r="5"/><circle cx="17" cy="14" r="5"/><circle cx="12" cy="7" r="5"/></svg>'
 
 # 4. CSS Estilizado
 st.markdown(f"""
@@ -31,6 +34,27 @@ st.markdown(f"""
     /* Ajuste da Fonte Soma Aço */
     .brand-title {{ font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; margin: 0; color: white; line-height: 1; }}
     .brand-subtitle {{ font-size: 0.85rem; color: #94a3b8; letter-spacing: 1px; margin: 0; }}
+    
+    /* Estilo dos Balões de Resultado */
+    .resultado-balao {{
+        background-color: #3b82f6;
+        padding: 15px;
+        border-radius: 12px;
+        color: white;
+        margin-bottom: 15px;
+        border: 1px solid #60a5fa;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+    .resultado-balao-falha {{
+        background-color: #991b1b;
+        padding: 15px;
+        border-radius: 12px;
+        color: #fecaca;
+        margin-bottom: 15px;
+        border: 1px solid #f87171;
+    }
+    .resultado-balao h5 {{ margin: 0; font-size: 1rem; color: white; }}
+    .resultado-balao p {{ margin: 5px 0 0 0; font-size: 1.1rem; font-weight: bold; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -44,12 +68,15 @@ def encontrar_combinacao(pesos, alvo, qtd_alvo=None, tolerancia=0.5):
                 return list(combo)
     return None
 
-# --- HEADER ---
+# --- HEADER (Adicionando Logo) ---
 st.markdown(f"""
     <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid #334155; padding-bottom: 20px; margin-bottom: 30px;">
-        <div>
-            <h1 class="brand-title">SOMA AÇO</h1>
-            <p class="brand-subtitle">SISTEMA DE GESTÃO E CONFERÊNCIA DE CARGAS</p>
+        <div style="display: flex; align-items: center;">
+            {icon_logo_rolls}
+            <div>
+                <h1 class="brand-title">SOMA AÇO</h1>
+                <p class="brand-subtitle">SISTEMA DE GESTÃO E CONFERÊNCIA DE CARGAS</p>
+            </div>
         </div>
         <div style="text-align: right; color:#475569; font-size:0.75rem; font-weight: 600;">INDUSTRIAL v1.1</div>
     </div>
@@ -57,12 +84,12 @@ st.markdown(f"""
 
 tab_config, tab_hist = st.tabs(["Painel", "Histórico"])
 
-# Hack para ícones nas abas
+# Hack para ícones nas abas (Atualizado para novos ícones)
 st.markdown(f"""<script>
     var tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
     if(tabs.length >= 2) {{
-        tabs[0].innerHTML = '{icon_gear} Configuração';
-        tabs[1].innerHTML = '{icon_timer} Histórico';
+        tabs[0].innerHTML = '{icon_paper_tab} Painel';
+        tabs[1].innerHTML = '{icon_clock_tab} Histórico';
     }}
 </script>""", unsafe_allow_html=True)
 
@@ -116,10 +143,24 @@ with tab_config:
         for l in st.session_state.lista_lotes:
             st.markdown(f'<div class="lote-item"><b>{l["id"]}</b> - {l["meta"]}kg</div>', unsafe_allow_html=True)
         
+        # Aplicando os Balões de Resultado
         if st.session_state.resultados_atuais:
             st.markdown("<h4 style='color:#3b82f6; font-size:0.9rem; margin-top:20px;'>ÚLTIMO RESULTADO:</h4>", unsafe_allow_html=True)
             for r in st.session_state.resultados_atuais:
-                st.write(f"{r['status']} **{r['id']}**: {r['rolos']}")
+                if "✅" in r['status']:
+                    st.markdown(f"""
+                        <div class="resultado-balao">
+                            <h5>✅ Lote: {r['id']}</h5>
+                            <p>{r['rolos']}</p>
+                        </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                        <div class="resultado-balao-falha">
+                            <h5>❌ Lote: {r['id']}</h5>
+                            <p>Nenhuma combinação encontrada.</p>
+                        </div>
+                    """, unsafe_allow_html=True)
 
 with tab_hist:
     for idx, op in enumerate(st.session_state.historico_operacoes):
@@ -132,8 +173,23 @@ with tab_hist:
             st.session_state.historico_operacoes.pop(idx)
             st.rerun()
             
+        # Replicando os balões no histórico para consistência visual
         for d in op['detalhes']:
-            st.markdown(f"{d['status']} **{d['id']}**: {d['rolos']}")
+            if "✅" in d['status']:
+                st.markdown(f"""
+                    <div class="resultado-balao" style="padding: 10px; margin-bottom: 8px;">
+                        <h5 style="font-size: 0.9rem;">✅ Lote: {d['id']}</h5>
+                        <p style="font-size: 1rem;">{d['rolos']}</p>
+                    </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                    <div class="resultado-balao-falha" style="padding: 10px; margin-bottom: 8px;">
+                        <h5 style="font-size: 0.9rem;">❌ Lote: {d['id']}</h5>
+                        <p style="font-size: 1rem;">Nenhuma combinação encontrada.</p>
+                    </div>
+                """, unsafe_allow_html=True)
+
         st.markdown(f"<small style='color:#475569'>Sobra no pátio: {op['sobra']}</small>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
