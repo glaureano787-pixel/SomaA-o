@@ -3,23 +3,38 @@ import pandas as pd
 from itertools import combinations
 
 # 1. Configuração da Página
-st.set_page_config(page_title="SomaAço | Gestão de Histórico", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="SomaAço | Gestão Industrial", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS Visual Industrial
-st.markdown("""
+# 2. Session State e Controle de Reset de Campos
+if 'lista_lotes' not in st.session_state: st.session_state.lista_lotes = []
+if 'historico_operacoes' not in st.session_state: st.session_state.historico_operacoes = []
+if 'resultados_atuais' not in st.session_state: st.session_state.resultados_atuais = None
+if 'form_count' not in st.session_state: st.session_state.form_count = 0
+
+# 3. Definição de Ícones SVG Minimalistas
+icon_gear = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"></path></svg>'
+icon_timer = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>'
+icon_trash = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>'
+
+# 4. CSS Estilizado
+st.markdown(f"""
     <style>
-    #MainMenu, footer, header {visibility: hidden;}
-    .stApp { background-color: #0f172a; color: #f8fafc; }
-    .section-card { background-color: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 15px; }
-    .lote-item { background-color: #0f172a; padding: 10px; border-radius: 8px; margin-bottom: 5px; border-left: 4px solid #3b82f6; }
-    .hist-item { background-color: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 10px; }
-    input, textarea { background-color: #020617 !important; border: 1px solid #334155 !important; color: #f1f5f9 !important; }
-    .stButton>button { width: 100%; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border: none; padding: 12px; font-weight: 700; border-radius: 8px; }
-    .stTabs [data-baseweb="tab-list"] { background-color: #1e293b; border-radius: 8px; padding: 5px; }
+    #MainMenu, footer, header {{visibility: hidden;}}
+    .stApp {{ background-color: #0f172a; color: #f8fafc; }}
+    .section-card {{ background-color: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; margin-bottom: 15px; }}
+    .lote-item {{ background-color: #0f172a; padding: 10px; border-radius: 8px; margin-bottom: 5px; border-left: 4px solid #3b82f6; }}
+    .hist-item {{ background-color: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 10px; }}
+    input, textarea {{ background-color: #020617 !important; border: 1px solid #334155 !important; color: #f1f5f9 !important; }}
+    .stButton>button {{ width: 100%; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border: none; padding: 12px; font-weight: 700; border-radius: 8px; }}
+    .stTabs [data-baseweb="tab-list"] {{ background-color: #1e293b; border-radius: 8px; padding: 5px; }}
+    
+    /* Ajuste da Fonte Soma Aço */
+    .brand-title {{ font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; margin: 0; color: white; line-height: 1; }}
+    .brand-subtitle {{ font-size: 0.85rem; color: #94a3b8; letter-spacing: 1px; margin: 0; }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- LÓGICA DO ALGORITMO ---
+# 5. Lógica do Algoritmo
 def encontrar_combinacao(pesos, alvo, qtd_alvo=None, tolerancia=0.5):
     r_range = [qtd_alvo] if qtd_alvo and qtd_alvo > 0 else range(1, len(pesos) + 1)
     for r in r_range:
@@ -30,101 +45,96 @@ def encontrar_combinacao(pesos, alvo, qtd_alvo=None, tolerancia=0.5):
     return None
 
 # --- HEADER ---
-st.markdown("""
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 25px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="background-color:#3b82f6; width:45px; height:45px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:1.5rem;">S</div>
-            <div><h1 style="margin:0; font-size:1.1rem; color:white;">SOMA AÇO</h1><p style="margin:0; font-size:0.7rem; color:#94a3b8;">HISTÓRICO E GESTÃO DE CARGAS</p></div>
+st.markdown(f"""
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid #334155; padding-bottom: 20px; margin-bottom: 30px;">
+        <div>
+            <h1 class="brand-title">SOMA AÇO</h1>
+            <p class="brand-subtitle">SISTEMA DE GESTÃO E CONFERÊNCIA DE CARGAS</p>
         </div>
+        <div style="text-align: right; color:#475569; font-size:0.75rem; font-weight: 600;">INDUSTRIAL v1.1</div>
     </div>
     """, unsafe_allow_html=True)
 
-# Session State
-if 'lista_lotes' not in st.session_state: st.session_state.lista_lotes = []
-if 'historico_operacoes' not in st.session_state: st.session_state.historico_operacoes = []
-if 'resultados_atuais' not in st.session_state: st.session_state.resultados_atuais = None
+tab_config, tab_hist = st.tabs(["Painel", "Histórico"])
 
-tab_config, tab_hist = st.tabs(["⚙️ Painel de Montagem", "⏱️ Histórico"])
+# Hack para ícones nas abas
+st.markdown(f"""<script>
+    var tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
+    if(tabs.length >= 2) {{
+        tabs[0].innerHTML = '{icon_gear} Configuração';
+        tabs[1].innerHTML = '{icon_timer} Histórico';
+    }}
+</script>""", unsafe_allow_html=True)
 
 with tab_config:
     col_input, col_lista = st.columns([1, 1], gap="large")
     
     with col_input:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown("<h4 style='color:#3b82f6; margin-top:0;'>1. CADASTRAR LOTES</h4>", unsafe_allow_html=True)
-        with st.container():
-            c_id = st.text_input("ID DO LOTE", placeholder="Ex: Lote 101")
-            c_meta = st.number_input("PESO TOTAL (KG)", min_value=0.0, step=0.1)
-            c_qtd = st.number_input("QTD ROLOS (OPCIONAL)", min_value=0, step=1)
-            if st.button("➕ ADICIONAR À FILA"):
-                if c_id and c_meta > 0:
-                    st.session_state.lista_lotes.append({"id": c_id, "meta": c_meta, "qtd": c_qtd})
-                    st.rerun()
+        st.markdown("<h4 style='color:#3b82f6; margin-top:0; font-size:0.9rem;'>ADICIONAR LOTE</h4>", unsafe_allow_html=True)
+        
+        # O uso de 'form_count' na key limpa os campos ao incrementar
+        k = st.session_state.form_count
+        c_id = st.text_input("ID DO LOTE", key=f"id_{k}", placeholder="Ex: Lote 01")
+        c_meta = st.number_input("PESO TOTAL (KG)", key=f"meta_{k}", min_value=0.0, step=0.1)
+        c_qtd = st.number_input("QTD ROLOS (OPCIONAL)", key=f"qtd_{k}", min_value=0, step=1)
+        
+        if st.button("➕ ADICIONAR À FILA"):
+            if c_id and c_meta > 0:
+                st.session_state.lista_lotes.append({"id": c_id, "meta": c_meta, "qtd": c_qtd})
+                st.session_state.form_count += 1  # Incrementa para resetar campos
+                st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown("<h4 style='color:#3b82f6; margin-top:0;'>2. PROCESSAR CARGA</h4>", unsafe_allow_html=True)
-        estoque_txt = st.text_area("PESOS DOS ROLOS DISPONÍVEIS", height=120, placeholder="600, 550, 480.5...")
-        if st.button("▶ INICIAR AGRUPAMENTO"):
+        st.markdown("<h4 style='color:#3b82f6; margin-top:0; font-size:0.9rem;'>PROCESSAR</h4>", unsafe_allow_html=True)
+        estoque_txt = st.text_area("PESOS DOS ROLOS (VÍRGULA OU ESPAÇO)", height=100)
+        if st.button("▶ INICIAR"):
             if st.session_state.lista_lotes and estoque_txt:
                 try:
-                    estoque = [float(x.strip()) for x in estoque_txt.replace('\n', ',').split(',') if x.strip()]
+                    estoque = [float(x.strip()) for x in estoque_txt.replace('\n', ',').replace(' ', ',').split(',') if x.strip()]
                     temp_estoque = estoque.copy()
                     resultados = []
                     for lote in st.session_state.lista_lotes:
                         enc = encontrar_combinacao(temp_estoque, lote['meta'], lote['qtd'])
                         if enc:
                             for p in enc: temp_estoque.remove(p)
-                            resultados.append({"id": lote['id'], "meta": lote['meta'], "rolos": enc, "status": "✅ Sucesso"})
+                            resultados.append({"id": lote['id'], "meta": lote['meta'], "rolos": enc, "status": "✅"})
                         else:
-                            resultados.append({"id": lote['id'], "meta": lote['meta'], "rolos": [], "status": "❌ Falha"})
+                            resultados.append({"id": lote['id'], "meta": lote['meta'], "rolos": [], "status": "❌"})
                     
-                    # Salvar no histórico (limite de 5)
-                    nova_op = {
-                        "id": pd.Timestamp.now().strftime("%d/%m %H:%M"),
-                        "detalhes": resultados,
-                        "sobra": temp_estoque
-                    }
+                    nova_op = {"id": pd.Timestamp.now().strftime("%H:%M:%S"), "detalhes": resultados, "sobra": temp_estoque}
                     st.session_state.historico_operacoes.insert(0, nova_op)
-                    if len(st.session_state.historico_operacoes) > 5:
-                        st.session_state.historico_operacoes.pop()
-                    
+                    if len(st.session_state.historico_operacoes) > 5: st.session_state.historico_operacoes.pop()
                     st.session_state.resultados_atuais = resultados
-                    st.session_state.lista_lotes = [] # Limpa a fila após processar
-                except: st.error("Erro nos dados de estoque.")
+                    st.session_state.lista_lotes = []
+                except: st.error("Erro nos pesos.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_lista:
-        st.markdown("<h4 style='color:#94a3b8;'>FILA ATUAL:</h4>", unsafe_allow_html=True)
-        for i, l in enumerate(st.session_state.lista_lotes):
-            st.markdown(f'<div class="lote-item">{l["id"]} - {l["meta"]}kg</div>', unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#94a3b8; font-size:0.9rem;'>FILA DE PROCESSAMENTO:</h4>", unsafe_allow_html=True)
+        for l in st.session_state.lista_lotes:
+            st.markdown(f'<div class="lote-item"><b>{l["id"]}</b> - {l["meta"]}kg</div>', unsafe_allow_html=True)
         
         if st.session_state.resultados_atuais:
-            st.markdown("---")
-            st.markdown("<h4 style='color:#3b82f6;'>RESULTADO ÚLTIMA OPERAÇÃO:</h4>", unsafe_allow_html=True)
+            st.markdown("<h4 style='color:#3b82f6; font-size:0.9rem; margin-top:20px;'>ÚLTIMO RESULTADO:</h4>", unsafe_allow_html=True)
             for r in st.session_state.resultados_atuais:
                 st.write(f"{r['status']} **{r['id']}**: {r['rolos']}")
 
 with tab_hist:
-    if not st.session_state.historico_operacoes:
-        st.info("Nenhum histórico registrado.")
-    else:
-        for idx, op in enumerate(st.session_state.historico_operacoes):
-            with st.container():
-                st.markdown(f'<div class="hist-item">', unsafe_allow_html=True)
-                c_data, c_del = st.columns([4, 1])
-                c_data.markdown(f"**Operação de {op['id']}**")
-                
-                # Botão de exclusão individual
-                if c_del.button(f"🗑️", key=f"del_{idx}"):
-                    st.session_state.historico_operacoes.pop(idx)
-                    st.rerun()
-                
-                for d in op['detalhes']:
-                    cor = "green" if "✅" in d['status'] else "red"
-                    st.markdown(f"<span style='color:{cor}'>{d['status']}</span> **{d['id']}**: {d['rolos']}", unsafe_allow_html=True)
-                
-                st.markdown(f"<small style='color:#475569'>Sobra: {op['sobra']}</small>", unsafe_allow_html=True)
-                st.markdown('</div>', unsafe_allow_html=True)
+    for idx, op in enumerate(st.session_state.historico_operacoes):
+        st.markdown('<div class="hist-item">', unsafe_allow_html=True)
+        c_txt, c_del = st.columns([10, 1])
+        c_txt.markdown(f"**Carga Processada às {op['id']}**")
+        
+        # Botão de exclusão com ícone SVG
+        if c_del.button("🗑️", key=f"del_{idx}", help="Excluir este registro"):
+            st.session_state.historico_operacoes.pop(idx)
+            st.rerun()
+            
+        for d in op['detalhes']:
+            st.markdown(f"{d['status']} **{d['id']}**: {d['rolos']}")
+        st.markdown(f"<small style='color:#475569'>Sobra no pátio: {op['sobra']}</small>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<p style='text-align: center; color: #475569; font-size: 0.7rem; margin-top: 40px;'>© 2026 SomaAço. Desenvolvido por Laureano Romagnole 38.</p>", unsafe_allow_html=True)
