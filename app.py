@@ -5,19 +5,19 @@ from itertools import combinations
 # 1. Configuração da Página
 st.set_page_config(page_title="SomaAço | Gestão Industrial", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. Session State e Controle de Reset de Campos
+# 2. Session State
 if 'lista_lotes' not in st.session_state: st.session_state.lista_lotes = []
 if 'historico_operacoes' not in st.session_state: st.session_state.historico_operacoes = []
 if 'resultados_atuais' not in st.session_state: st.session_state.resultados_atuais = None
 if 'form_count' not in st.session_state: st.session_state.form_count = 0
 
-# 3. Definição de Ícones SVG
+# 3. Definição de Ícones SVG (Mantendo sua identidade visual)
 icon_trash = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>'
 icon_paper_tab = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
 icon_clock_tab = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
 icon_logo_rolls = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 15px;"><circle cx="7" cy="14" r="5"/><circle cx="17" cy="14" r="5"/><circle cx="12" cy="7" r="5"/></svg>'
 
-# 4. CSS Estilizado (Chaves dobradas {{ }} para evitar SyntaxError)
+# 4. CSS Estilizado
 st.markdown(f"""
     <style>
     #MainMenu, footer, header {{ visibility: hidden; }}
@@ -28,31 +28,14 @@ st.markdown(f"""
     input, textarea {{ background-color: #020617 !important; border: 1px solid #334155 !important; color: #f1f5f9 !important; }}
     .stButton>button {{ width: 100%; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border: none; padding: 12px; font-weight: 700; border-radius: 8px; }}
     .stTabs [data-baseweb="tab-list"] {{ background-color: #1e293b; border-radius: 8px; padding: 5px; }}
-    
     .brand-title {{ font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; margin: 0; color: white; line-height: 1; }}
     .brand-subtitle {{ font-size: 0.85rem; color: #94a3b8; letter-spacing: 1px; margin: 0; }}
-    
-    .resultado-balao {{
-        background-color: #3b82f6;
-        padding: 15px;
-        border-radius: 12px;
-        color: white;
-        margin-bottom: 15px;
-        border: 1px solid #60a5fa;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-    }}
-    .resultado-balao-falha {{
-        background-color: #991b1b;
-        padding: 15px;
-        border-radius: 12px;
-        color: #fecaca;
-        margin-bottom: 15px;
-        border: 1px solid #f87171;
-    }}
+    .resultado-balao {{ background-color: #3b82f6; padding: 15px; border-radius: 12px; color: white; margin-bottom: 15px; border: 1px solid #60a5fa; }}
+    .resultado-balao-falha {{ background-color: #991b1b; padding: 15px; border-radius: 12px; color: #fecaca; margin-bottom: 15px; border: 1px solid #f87171; }}
     </style>
     """, unsafe_allow_html=True)
 
-# 5. Lógica do Algoritmo
+# 5. Algoritmo
 def encontrar_combinacao(pesos, alvo, qtd_alvo=None, tolerancia=0.5):
     r_range = [qtd_alvo] if qtd_alvo and qtd_alvo > 0 else range(1, len(pesos) + 1)
     for r in r_range:
@@ -78,7 +61,6 @@ st.markdown(f"""
 
 tab_config, tab_hist = st.tabs(["Painel", "Histórico"])
 
-# Script para ícones (também com chaves duplicadas)
 st.markdown(f"""<script>
     var tabs = window.parent.document.querySelectorAll('[data-baseweb="tab"]');
     if(tabs.length >= 2) {{
@@ -89,16 +71,13 @@ st.markdown(f"""<script>
 
 with tab_config:
     col_input, col_lista = st.columns([1, 1], gap="large")
-    
     with col_input:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown("<h4 style='color:#3b82f6; margin-top:0; font-size:0.9rem;'>ADICIONAR LOTE</h4>", unsafe_allow_html=True)
-        
         k = st.session_state.form_count
         c_id = st.text_input("ID DO LOTE", key=f"id_{k}", placeholder="Ex: Lote 01")
         c_meta = st.number_input("PESO TOTAL (KG)", key=f"meta_{k}", min_value=0.0, step=0.1)
         c_qtd = st.number_input("QTD ROLOS (OPCIONAL)", key=f"qtd_{k}", min_value=0, step=1)
-        
         if st.button("➕ ADICIONAR À FILA"):
             if c_id and c_meta > 0:
                 st.session_state.lista_lotes.append({"id": c_id, "meta": c_meta, "qtd": c_qtd})
@@ -112,7 +91,10 @@ with tab_config:
         if st.button("▶ INICIAR"):
             if st.session_state.lista_lotes and estoque_txt:
                 try:
-                    estoque = [float(x.strip()) for x in estoque_txt.replace('\n', ',').replace(' ', ',').split(',') if x.strip()]
+                    # LIMPEZA REFORÇADA: Troca quebra de linha por vírgula, separa e remove vazios
+                    limpo = estoque_txt.replace('\n', ',').replace(' ', ',')
+                    estoque = [float(x.strip()) for x in limpo.split(',') if x.strip()]
+                    
                     temp_estoque = estoque.copy()
                     resultados = []
                     for lote in st.session_state.lista_lotes:
@@ -123,20 +105,19 @@ with tab_config:
                         else:
                             resultados.append({"id": lote['id'], "meta": lote['meta'], "rolos": [], "status": "❌"})
                     
-                    nova_op = {"id": pd.Timestamp.now().strftime("%H:%M:%S"), "detalhes": resultados, "sobra": temp_estoque}
-                    st.session_state.historico_operacoes.insert(0, nova_op)
+                    st.session_state.historico_operacoes.insert(0, {"id": pd.Timestamp.now().strftime("%H:%M:%S"), "detalhes": resultados, "sobra": temp_estoque})
                     if len(st.session_state.historico_operacoes) > 5: st.session_state.historico_operacoes.pop()
                     st.session_state.resultados_atuais = resultados
                     st.session_state.lista_lotes = []
                     st.rerun()
-                except: st.error("Erro nos pesos.")
+                except ValueError:
+                    st.error("Erro nos pesos: Verifique se usou letras ou símbolos inválidos.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_lista:
         st.markdown("<h4 style='color:#94a3b8; font-size:0.9rem;'>FILA DE PROCESSAMENTO:</h4>", unsafe_allow_html=True)
         for l in st.session_state.lista_lotes:
             st.markdown(f'<div class="lote-item"><b>{l["id"]}</b> - {l["meta"]}kg</div>', unsafe_allow_html=True)
-        
         if st.session_state.resultados_atuais:
             st.markdown("<h4 style='color:#3b82f6; font-size:0.9rem; margin-top:20px;'>ÚLTIMO RESULTADO:</h4>", unsafe_allow_html=True)
             for r in st.session_state.resultados_atuais:
