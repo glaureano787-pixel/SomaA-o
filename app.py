@@ -10,12 +10,7 @@ if 'lista_lotes' not in st.session_state: st.session_state.lista_lotes = []
 if 'historico_operacoes' not in st.session_state: st.session_state.historico_operacoes = []
 if 'resultados_atuais' not in st.session_state: st.session_state.resultados_atuais = None
 if 'edit_index' not in st.session_state: st.session_state.edit_index = None
-if 'input_pesos' not in st.session_state: st.session_state.input_pesos = ""
-
-# Estados para os campos de texto (permitem o reset automático)
-if 'temp_id' not in st.session_state: st.session_state.temp_id = ""
-if 'temp_meta' not in st.session_state: st.session_state.temp_meta = 0
-if 'temp_qtd' not in st.session_state: st.session_state.temp_qtd = 0
+if 'form_reset_key' not in st.session_state: st.session_state.form_reset_key = 0
 
 # 3. Ícone SVG
 icon_logo_rolls = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 15px;"><circle cx="7" cy="14" r="5"/><circle cx="17" cy="14" r="5"/><circle cx="12" cy="7" r="5"/></svg>'
@@ -33,7 +28,6 @@ st.markdown(f"""
     .brand-subtitle {{ font-size: 0.85rem; color: #94a3b8; margin: 0; }}
     .resultado-balao {{ background-color: #3b82f6; padding: 15px; border-radius: 12px; color: white; margin-bottom: 10px; border: 1px solid #60a5fa; }}
     .resultado-balao-falha {{ background-color: #991b1b; padding: 15px; border-radius: 12px; color: #fecaca; margin-bottom: 10px; border: 1px solid #f87171; }}
-    .hist-item {{ background-color: #1e293b; padding: 15px; border-radius: 10px; border: 1px solid #334155; margin-bottom: 10px; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -68,46 +62,61 @@ with tab_config:
         label_botao = "💾 SALVAR ALTERAÇÃO" if st.session_state.edit_index is not None else "➕ ADICIONAR À FILA"
         st.markdown(f"<h4 style='color:#3b82f6; margin-top:0; font-size:0.9rem;'>{label_botao.split()[-1]} LOTE</h4>", unsafe_allow_html=True)
         
-        # Interface de input usando os estados temporários
-        c_id = st.text_input("ID DO LOTE", value=st.session_state.temp_id, key="input_id")
-        c_meta = st.number_input("PESO TOTAL (KG)", value=st.session_state.temp_meta, key="input_meta", step=1)
-        c_qtd = st.number_input("QTD ROLOS (OPCIONAL)", value=st.session_state.temp_qtd, key="input_qtd", step=1)
-        
-        if st.button(label_botao):
-            if c_id and c_meta > 0:
-                novo = {"id": c_id, "meta": int(c_meta), "qtd": int(c_qtd)}
-                if st.session_state.edit_index is not None:
-                    st.session_state.lista_lotes[st.session_state.edit_index] = novo
-                    st.session_state.edit_index = None
+        # A "form_reset_key" garante que os campos limpem ao mudar o valor da chave
+        with st.container():
+            c_id = st.text_input("ID DO LOTE", key=f"id_field_{st.session_state.form_reset_key}")
+            c_meta = st.number_input("PESO TOTAL (KG)", min_value=0, step=1, key=f"meta_field_{st.session_state.form_reset_key}")
+            c_qtd = st.number_input("QTD ROLOS (OPCIONAL)", min_value=0, step=1, key=f"qtd_field_{st.session_state.form_reset_key}")
+            
+            if st.button(label_botao):
+                if c_id and c_meta > 0:
+                    novo = {"id": c_id, "meta": int(c_meta), "qtd": int(c_qtd)}
+                    if st.session_state.edit_index is not None:
+                        st.session_state.lista_lotes[st.session_state.edit_index] = novo
+                        st.session_state.edit_index = None
+                    else:
+                        st.session_state.lista_lotes.append(novo)
+                    
+                    # Incrementa a chave para forçar o reset visual dos campos
+                    st.session_state.form_reset_key += 1
+                    st.rerun()
                 else:
-                    st.session_state.lista_lotes.append(novo)
-                
-                # RESET DOS CAMPOS
-                st.session_state.temp_id = ""
-                st.session_state.temp_meta = 0
-                st.session_state.temp_qtd = 0
-                st.rerun()
+                    st.warning("Preencha o ID e o Peso do Lote.")
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown("<h4 style='color:#3b82f6; margin-top:0; font-size:0.9rem;'>PROCESSAR</h4>", unsafe_allow_html=True)
-        estoque_txt = st.text_area("PESOS DOS ROLOS", value=st.session_state.input_pesos, height=120)
+        
+        if 'input_pesos' not in st.session_state: st.session_state.input_pesos = ""
+        estoque_txt = st.text_area("PESOS DOS ROLOS (VÍRGULA OU ESPAÇO)", value=st.session_state.input_pesos, height=120)
         
         if st.button("▶ INICIAR"):
             if st.session_state.lista_lotes and estoque_txt:
                 try:
-                    # Tratamento para INTEIROS (substitui vírgula por espaço para aceitar múltiplos formatos)
-                    limpo = estoque_txt.replace('\n', ' ').replace(',', ' ')
-                    estoque = [int(x.strip()) for x in limpo.split() if x.strip()]
+                    # Tratamento robusto para converter tudo em inteiros
+                    dados_limpos = estoque_txt.replace('\n', ' ').replace(',', ' ')
+                    estoque = [int(x.strip()) for x in dados_limpos.split() if x.strip()]
+                    
                     temp_estoque, resultados = estoque.copy(), []
                     
                     for lote in st.session_state.lista_lotes:
                         enc = encontrar_combinacao(temp_estoque, lote['meta'], lote['qtd'])
                         if enc:
                             for p in enc: temp_estoque.remove(p)
-                            resultados.append({"id": lote['id'], "meta": lote['meta'], "rolos": enc, "qtd_encontrada": len(enc), "status": "✅"})
+                            resultados.append({
+                                "id": lote['id'], 
+                                "meta": lote['meta'], 
+                                "rolos": enc, 
+                                "qtd_encontrada": len(enc), 
+                                "status": "✅"
+                            })
                         else:
-                            resultados.append({"id": lote['id'], "meta": lote['meta'], "rolos": None, "status": "❌"})
+                            resultados.append({
+                                "id": lote['id'], 
+                                "meta": lote['meta'], 
+                                "rolos": None, 
+                                "status": "❌"
+                            })
                     
                     st.session_state.historico_operacoes.insert(0, {
                         "hora": pd.Timestamp.now().strftime("%H:%M:%S"),
@@ -120,59 +129,55 @@ with tab_config:
                     st.session_state.input_pesos = ""
                     st.rerun()
                 except ValueError:
-                    st.error("Erro nos pesos: Verifique se há letras ou símbolos inválidos.")
+                    st.error("Erro nos pesos: Use apenas números inteiros separados por espaço ou linha.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_lista:
-        st.markdown("<h4 style='color:#94a3b8; font-size:0.9rem;'>FILA:</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#94a3b8; font-size:0.9rem;'>FILA ATUAL:</h4>", unsafe_allow_html=True)
         for i, l in enumerate(st.session_state.lista_lotes):
-            c_info, c_ed, c_de = st.columns([3, 0.5, 0.5])
+            c_info, c_de = st.columns([4, 1])
             c_info.markdown(f'<div class="lote-item"><b>{l["id"]}</b> | {l["meta"]}kg</div>', unsafe_allow_html=True)
-            if c_ed.button("✏️", key=f"e_{i}"):
-                st.session_state.edit_index = i
-                st.session_state.temp_id = l['id']
-                st.session_state.temp_meta = l['meta']
-                st.session_state.temp_qtd = l['qtd']
-                st.rerun()
-            if c_de.button("🗑️", key=f"d_{i}"):
+            if c_de.button("🗑️", key=f"del_{i}"):
                 st.session_state.lista_lotes.pop(i)
                 st.rerun()
         
         if st.session_state.resultados_atuais:
-            st.markdown("<h4 style='color:#3b82f6; font-size:0.9rem; margin-top:20px;'>RESULTADO:</h4>", unsafe_allow_html=True)
+            st.markdown("<h4 style='color:#3b82f6; font-size:0.9rem; margin-top:20px;'>ÚLTIMO RESULTADO:</h4>", unsafe_allow_html=True)
             for r in st.session_state.resultados_atuais:
                 if r['status'] == "✅":
-                    rolos_kg = [f"{p}kg" for p in r['rolos']]
+                    rolos_com_unidade = [f"{p}kg" for p in r['rolos']]
                     st.markdown(f"""
                         <div class="resultado-balao">
                             <b>✅ Lote: {r["id"]}</b> ({r['qtd_encontrada']} rolos)<br>
-                            <small>{rolos_kg}</small>
+                            <small>{rolos_com_unidade}</small>
                         </div>""", unsafe_allow_html=True)
                 else:
                     st.markdown(f"""
                         <div class="resultado-balao-falha">
                             <b>❌ Lote: {r["id"]}</b><br>
-                            <small>Não encontrado. Falta atender {r["meta"]}kg</small>
+                            <small>Não encontrado. Faltou atingir {r["meta"]}kg</small>
                         </div>""", unsafe_allow_html=True)
 
 with tab_hist:
     for idx, op in enumerate(st.session_state.historico_operacoes):
         st.markdown('<div class="hist-item">', unsafe_allow_html=True)
         c_h, c_act = st.columns([8, 2])
-        c_h.write(f"**Carga {op['hora']}**")
-        if c_act.button("🔄 REPLICAR", key=f"rep_{idx}"):
+        c_h.write(f"**Operação às {op['hora']}**")
+        
+        if c_act.button("🔄 REPLICAR", key=f"rep_hist_{idx}"):
             st.session_state.lista_lotes = []
             for d in op['detalhes']:
                 st.session_state.lista_lotes.append({"id": d['id'], "meta": d['meta'], "qtd": 0})
             st.session_state.input_pesos = op['entrada_original']
             st.rerun()
+            
         for d in op['detalhes']:
             if d['rolos']:
                 rolos_kg = [f"{p}kg" for p in d['rolos']]
-                st.write(f"{d['status']} {d['id']} ({d['qtd_encontrada']} rolos): {rolos_kg}")
+                st.write(f"{d['status']} {d['id']} ({len(d['rolos'])} rolos): {rolos_kg}")
             else:
-                st.write(f"{d['status']} {d['id']}: Falhou")
-        st.markdown(f"<small style='color:#64748b'>Sobra: {op['sobra']}</small>", unsafe_allow_html=True)
+                st.write(f"{d['status']} {d['id']}: Falha na combinação")
+        st.markdown(f"<small style='color:#64748b'>Sobra no pátio: {op['sobra']}</small>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<p style='text-align: center; color: #475569; font-size: 0.7rem; margin-top: 40px;'>© 2026 SomaAço. Desenvolvido por Laureano Romagnole 38.</p>", unsafe_allow_html=True)
