@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from itertools import combinations
+import re
 
 # 1. Configuração da Página
 st.set_page_config(page_title="SomaAço | Gestão Industrial", layout="wide", initial_sidebar_state="collapsed")
@@ -11,7 +12,7 @@ if 'historico_operacoes' not in st.session_state: st.session_state.historico_ope
 if 'resultados_atuais' not in st.session_state: st.session_state.resultados_atuais = None
 if 'form_reset_key' not in st.session_state: st.session_state.form_reset_key = 0
 
-# 3. CSS Original Restaurado
+# 3. CSS Original (O que você aprovou)
 st.markdown(f"""
     <style>
     #MainMenu, footer, header {{ visibility: hidden; }}
@@ -30,46 +31,38 @@ st.markdown(f"""
 # 4. Motor de Cálculo Robusto
 def resolver_carregamento(pesos, lotes):
     def backtrack(idx, pesos_disponiveis):
-        if idx == len(lotes):
-            return [], pesos_disponiveis
-        
+        if idx == len(lotes): return [], pesos_disponiveis
         lote = lotes[idx]
-        alvo = lote['meta']
-        qtd = lote['qtd']
-        
-        # Define o intervalo de busca para a quantidade de rolos
-        r_range = [qtd] if qtd > 0 else range(1, len(pesos_disponiveis) + 1)
-        
+        r_range = [lote['qtd']] if lote['qtd'] > 0 else range(1, len(pesos_disponiveis) + 1)
         for r in r_range:
             if r > len(pesos_disponiveis): continue
             for combo in combinations(pesos_disponiveis, r):
-                if sum(combo) == alvo:
+                if sum(combo) == lote['meta']:
                     restantes = list(pesos_disponiveis)
                     for p in combo: restantes.remove(p)
-                    
                     res_posterior, sobra_final = backtrack(idx + 1, restantes)
                     if res_posterior is not None:
-                        return [{"id": lote['id'], "meta": alvo, "rolos": list(combo), "status": "✅"}] + res_posterior, sobra_final
+                        return [{"id": lote['id'], "meta": lote['meta'], "rolos": list(combo), "status": "✅"}] + res_posterior, sobra_final
         return None, None
-
     return backtrack(0, pesos)
 
-# --- HEADER ---
-st.markdown('<h1 class="brand-title">SOMA AÇO</h1><p class="brand-subtitle">SISTEMA DE GESTÃO E CONFERÊNCIA DE CARGAS</p>', unsafe_allow_html=True)
+# --- HEADER COM A LOGO QUE VOCÊ MANDOU ---
+col_logo, col_tit = st.columns([1, 5])
+with col_logo:
+    st.image("icone do tirulo.jpg", width=90) #
+with col_tit:
+    st.markdown('<h1 class="brand-title">SOMA AÇO</h1><p class="brand-subtitle">SISTEMA DE GESTÃO E CONFERÊNCIA DE CARGAS</p>', unsafe_allow_html=True)
 
 tab_painel, tab_hist = st.tabs(["Painel", "Histórico"])
 
 with tab_painel:
     col_in, col_out = st.columns([1, 1], gap="large")
-    
     with col_in:
-        # ADICIONAR LOTE
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown("<h4 style='color:#3b82f6; margin-top:0; font-size:0.9rem;'>ADICIONAR LOTE</h4>", unsafe_allow_html=True)
         c_id = st.text_input("ID DO LOTE", key=f"id_{st.session_state.form_reset_key}")
         c_meta = st.number_input("PESO TOTAL (KG)", min_value=0, step=1, key=f"meta_{st.session_state.form_reset_key}")
         c_qtd = st.number_input("QTD ROLOS (OPCIONAL)", min_value=0, step=1, key=f"qtd_{st.session_state.form_reset_key}")
-        
         if st.button("➕ ADICIONAR À FILA"):
             if c_id and c_meta > 0:
                 st.session_state.lista_lotes.append({"id": str(c_id).upper(), "meta": int(c_meta), "qtd": int(c_qtd)})
@@ -77,47 +70,26 @@ with tab_painel:
                 st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # PROCESSAR
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown("<h4 style='color:#3b82f6; margin-top:0; font-size:0.9rem;'>PROCESSAR</h4>", unsafe_allow_html=True)
-        pesos_input = st.text_area("PESOS DOS ROLOS RECEBIDOS", height=120, placeholder="Digite ou cole os pesos...")
-        
+        pesos_input = st.text_area("PESOS DOS ROLOS RECEBIDOS", height=120)
         if st.button("▶ INICIAR CONFERÊNCIA"):
-            if not st.session_state.lista_lotes:
-                st.error("Adicione pelo menos um lote na fila.")
-            elif not pesos_input.strip():
-                st.error("Insira os pesos dos rolos.")
-            else:
+            if st.session_state.lista_lotes and pesos_input:
                 try:
-                    # Limpeza profunda dos dados de entrada
-                    import re
-                    # Encontra todos os números no texto, ignorando vírgulas, espaços e letras
                     estoque = [int(n) for n in re.findall(r'\d+', pesos_input)]
-                    
                     solucao, sobras = resolver_carregamento(estoque, st.session_state.lista_lotes)
-                    
                     if solucao:
                         res_final = {"lotes": solucao, "sobras": sobras}
                     else:
-                        res_final = {
-                            "lotes": [{"id": l['id'], "meta": l['meta'], "status": "❌", "rolos": None} for l in st.session_state.lista_lotes],
-                            "sobras": estoque
-                        }
-                    
-                    st.session_state.historico_operacoes.insert(0, {
-                        "hora": pd.Timestamp.now().strftime("%H:%M:%S"),
-                        "detalhes": res_final["lotes"],
-                        "sobras": res_final["sobras"]
-                    })
+                        res_final = {"lotes": [{"id": l['id'], "meta": l['meta'], "status": "❌", "rolos": None} for l in st.session_state.lista_lotes], "sobras": estoque}
+                    st.session_state.historico_operacoes.insert(0, {"hora": pd.Timestamp.now().strftime("%H:%M:%S"), "detalhes": res_final["lotes"], "sobras": res_final["sobras"]})
                     st.session_state.resultados_atuais = res_final
                     st.session_state.lista_lotes = []
                     st.rerun()
-                except Exception as e:
-                    st.error(f"Erro ao processar dados. Verifique a formatação.")
-
+                except: st.error("Erro nos pesos.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # LIMPAR TELA
+        # BOTÃO LIMPAR TELA (RESET)
         if st.button("🧹 LIMPAR TELA"):
             st.session_state.lista_lotes = []
             st.session_state.resultados_atuais = None
@@ -125,32 +97,29 @@ with tab_painel:
             st.rerun()
 
     with col_out:
-        st.markdown("<h4 style='color:#94a3b8; font-size:0.9rem;'>FILA / RESULTADOS:</h4>", unsafe_allow_html=True)
+        col_t1, col_t2 = st.columns([1, 4])
+        with col_t1: st.image("folha de papel.webp", width=40) #
+        with col_t2: st.markdown("<h4 style='color:#94a3b8; font-size:0.9rem; margin-top:10px;'>FILA / RESULTADOS:</h4>", unsafe_allow_html=True)
         
-        # Exibe fila de espera
         for l in st.session_state.lista_lotes:
             st.markdown(f'<div class="lote-item"><b>{l["id"]}</b>: {l["meta"]}kg</div>', unsafe_allow_html=True)
         
-        # Exibe resultados do último processamento
         if st.session_state.resultados_atuais:
             for r in st.session_state.resultados_atuais['lotes']:
                 if r['status'] == "✅":
-                    st.markdown(f"""
-                        <div class="resultado-balao">
-                            <b>✅ Lote: {r["id"]}</b><br>
-                            <small>{len(r["rolos"])} rolos: {r["rolos"]}</small>
-                        </div>""", unsafe_allow_html=True)
+                    st.markdown(f'<div class="resultado-balao"><b>✅ Lote: {r["id"]}</b><br><small>{len(r["rolos"])} rolos: {r["rolos"]}</small></div>', unsafe_allow_html=True)
                 else:
-                    st.markdown(f'<div class="resultado-balao-falha"><b>❌ Lote: {r["id"]}</b>: Não foi possível fechar {r["meta"]}kg.</div>', unsafe_allow_html=True)
-            
+                    st.markdown(f'<div class="resultado-balao-falha"><b>❌ Lote: {r["id"]}</b>: Não encontrado.</div>', unsafe_allow_html=True)
             if st.session_state.resultados_atuais['sobras']:
-                st.warning(f"SOBRAS NÃO ALOCADAS: {st.session_state.resultados_atuais['sobras']}")
+                st.warning(f"SOBRAS: {st.session_state.resultados_atuais['sobras']}")
 
 with tab_hist:
+    col_h1, col_h2 = st.columns([1, 10])
+    with col_h1: st.image("relogio.webp", width=40) #
+    with col_h2: st.subheader("Histórico de Cargas")
     for op in st.session_state.historico_operacoes:
         with st.expander(f"Carga às {op['hora']}"):
             for d in op['detalhes']:
                 st.write(f"{d['status']} {d['id']} ({d['meta']}kg): {d['rolos']}")
-            if op['sobras']: st.write(f"Sobras: {op['sobras']}")
 
-st.markdown("<p style='text-align: center; color: #475569; font-size: 0.7rem; margin-top: 40px;'>© 2026 SomaAço. Desenvolvido por Laureano Romagnole 38.</p>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align: center; color: #475569; font-size: 0.7rem; margin-top: 40px;'>© 2026 SomaAço. Desenvolvido por Laureano Romagnole 38.</p>", unsafe_allow_html=True)
